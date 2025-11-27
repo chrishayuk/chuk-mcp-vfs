@@ -8,7 +8,6 @@ This is a thin wrapper around chuk-artifacts that provides:
 """
 
 import asyncio
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +38,7 @@ class WorkspaceManager:
         self._namespace_to_info: dict[str, WorkspaceInfo] = {}
         self._current_namespace_id: str | None = None
         self._lock = asyncio.Lock()
+        self._initialized = False
 
     def _provider_type_to_vfs_type(self, provider_type: ProviderType) -> str:
         """Convert ProviderType enum to VFS provider string."""
@@ -89,6 +89,9 @@ class WorkspaceManager:
             ValueError: If workspace name already exists in current scope
         """
         async with self._lock:
+            # Sync with existing namespaces first
+            await self._sync_namespaces()
+
             # Get user_id and session_id from context if not provided
             if user_id is None and scope in (StorageScope.USER, StorageScope.SESSION):
                 try:
@@ -183,6 +186,42 @@ class WorkspaceManager:
                     else None
                 )
 
+    async def _sync_namespaces(self) -> None:
+        """Sync workspace tracking with existing namespaces from artifact store."""
+        if self._initialized:
+            return
+
+        # Get all workspace-type namespaces from the store
+        namespaces = self.list_all_namespaces()
+
+        for ns_info in namespaces:
+            if ns_info.type != NamespaceType.WORKSPACE:
+                continue
+
+            # Convert namespace to workspace info
+            provider_type = self._vfs_type_to_provider_type(
+                ns_info.provider_type or "vfs-memory"
+            )
+
+            workspace_info = WorkspaceInfo(
+                name=ns_info.name,
+                provider_type=provider_type,
+                created_at=ns_info.created_at,
+                current_path="/",
+                metadata={
+                    "namespace_id": ns_info.namespace_id,
+                    "scope": ns_info.scope.value if ns_info.scope else "session",
+                },
+            )
+
+            self._namespace_to_info[ns_info.namespace_id] = workspace_info
+
+        # Set first workspace as current if available
+        if self._namespace_to_info and self._current_namespace_id is None:
+            self._current_namespace_id = next(iter(self._namespace_to_info.keys()))
+
+        self._initialized = True
+
     def list_workspaces(self) -> list[WorkspaceInfo]:
         """List all tracked workspaces."""
         return list(self._namespace_to_info.values())
@@ -191,6 +230,7 @@ class WorkspaceManager:
         self,
         user_id: str | None = None,
         session_id: str | None = None,
+        type: NamespaceType | None = None,
     ) -> list[NamespaceInfo]:
         """
         List all namespaces from artifact store.
@@ -198,6 +238,7 @@ class WorkspaceManager:
         Args:
             user_id: Filter by user (auto-detected from context if None)
             session_id: Filter by session (auto-detected from context if None)
+            type: Filter by namespace type (WORKSPACE or BLOB)
 
         Returns:
             List of NamespaceInfo objects
@@ -218,6 +259,7 @@ class WorkspaceManager:
         return self._store.list_namespaces(
             user_id=user_id,
             session_id=session_id,
+            type=type,
         )
 
     async def switch_workspace(self, name: str) -> WorkspaceInfo:
@@ -332,9 +374,7 @@ class WorkspaceManager:
         current = self.get_current_path(workspace)
         return str(Path(current) / path)
 
-    async def _apply_template(
-        self, vfs: AsyncVirtualFileSystem, template: str
-    ) -> None:
+    async def _apply_template(self, vfs: AsyncVirtualFileSystem, template: str) -> None:
         """
         Apply a template to a VFS.
 

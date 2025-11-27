@@ -73,6 +73,8 @@ class WorkspaceTools:
         Returns:
             WorkspaceListResponse with list of workspaces
         """
+        # Sync with namespaces first
+        await self.workspace_manager._sync_namespaces()
         workspaces = self.workspace_manager.list_workspaces()
 
         return WorkspaceListResponse(workspaces=workspaces)

@@ -56,10 +56,10 @@ class VFSTools:
         resolved_path = self.workspace_manager.resolve_path(path)
 
         content = await vfs.read_file(resolved_path)
-        if isinstance(content, bytes):
-            content_str = content.decode("utf-8")
-        else:
-            content_str = content
+        if content is None:
+            raise ValueError(f"Could not read file: {resolved_path}")
+
+        content_str = content.decode("utf-8") if isinstance(content, bytes) else content
 
         return ReadResponse(
             path=resolved_path, content=content_str, size=len(content_str.encode())
@@ -78,17 +78,21 @@ class VFSTools:
         vfs = self.workspace_manager.get_current_vfs()
         resolved_path = self.workspace_manager.resolve_path(request.path)
 
-        # Ensure parent directory exists
+        # Ensure all parent directories exist
         parent = str(Path(resolved_path).parent)
-        if parent != "/" and not await vfs.exists(parent):
-            await vfs.create_directory(parent)
+        if parent != "/":
+            # Create all parent directories if they don't exist
+            parts = [p for p in parent.split("/") if p]
+            current_path = ""
+            for part in parts:
+                current_path += f"/{part}"
+                if not await vfs.exists(current_path):
+                    await vfs.mkdir(current_path)
 
         content_bytes = request.content.encode("utf-8")
         await vfs.write_file(resolved_path, content_bytes)
 
-        return WriteResponse(
-            success=True, path=resolved_path, size=len(content_bytes)
-        )
+        return WriteResponse(success=True, path=resolved_path, size=len(content_bytes))
 
     async def ls(self, path: str = ".") -> ListDirectoryResponse:
         """
@@ -103,18 +107,29 @@ class VFSTools:
         vfs = self.workspace_manager.get_current_vfs()
         resolved_path = self.workspace_manager.resolve_path(path)
 
-        entries = await vfs.list_directory(resolved_path)
+        # ls() returns list of filenames
+        filenames = await vfs.ls(resolved_path)
 
-        file_entries = [
-            FileEntry(
-                name=entry.name,
-                path=entry.path,
-                type=NodeType.DIRECTORY if entry.is_directory else NodeType.FILE,
-                size=entry.size,
-                modified=entry.modified_time,
-            )
-            for entry in entries
-        ]
+        file_entries = []
+        for name in filenames:
+            # Construct full path
+            if resolved_path == "/":
+                full_path = f"/{name}"
+            else:
+                full_path = f"{resolved_path}/{name}"
+
+            # Get node info for each entry
+            node_info = await vfs.get_node_info(full_path)
+            if node_info:
+                file_entries.append(
+                    FileEntry(
+                        name=name,
+                        path=full_path,
+                        type=NodeType.DIRECTORY if node_info.is_dir else NodeType.FILE,
+                        size=node_info.size,
+                        modified=node_info.modified_at,
+                    )
+                )
 
         return ListDirectoryResponse(path=resolved_path, entries=file_entries)
 
@@ -136,25 +151,32 @@ class VFSTools:
             if depth > max_depth:
                 return TreeNode(name="...", type=NodeType.DIRECTORY, truncated=True)
 
-            node_info = await vfs.get_node(current_path)
-            node_type = (
-                NodeType.DIRECTORY if node_info.is_directory else NodeType.FILE
-            )
+            node_info = await vfs.get_node_info(current_path)
+            if not node_info:
+                return TreeNode(name="???", type=NodeType.FILE, size=0)
 
-            if not node_info.is_directory:
+            node_type = NodeType.DIRECTORY if node_info.is_dir else NodeType.FILE
+
+            if not node_info.is_dir:
                 return TreeNode(
-                    name=node_info.name, type=node_type, size=node_info.size
+                    name=Path(current_path).name, type=node_type, size=node_info.size
                 )
 
             # Recursively build tree for directory
             children: list[TreeNode] = []
-            entries = await vfs.list_directory(current_path)
-            for entry in entries:
-                child_tree = await build_tree(entry.path, depth + 1)
+            filenames = await vfs.ls(current_path)
+            for name in filenames:
+                if current_path == "/":
+                    child_path = f"/{name}"
+                else:
+                    child_path = f"{current_path}/{name}"
+                child_tree = await build_tree(child_path, depth + 1)
                 children.append(child_tree)
 
             return TreeNode(
-                name=node_info.name, type=node_type, children=children if children else None
+                name=Path(current_path).name if current_path != "/" else "/",
+                type=node_type,
+                children=children if children else None,
             )
 
         root = await build_tree(resolved_path, 0)
@@ -173,7 +195,7 @@ class VFSTools:
         vfs = self.workspace_manager.get_current_vfs()
         resolved_path = self.workspace_manager.resolve_path(path)
 
-        await vfs.create_directory(resolved_path)
+        await vfs.mkdir(resolved_path)
 
         return MkdirResponse(success=True, path=resolved_path)
 
@@ -191,18 +213,20 @@ class VFSTools:
         vfs = self.workspace_manager.get_current_vfs()
         resolved_path = self.workspace_manager.resolve_path(path)
 
-        node = await vfs.get_node(resolved_path)
+        node = await vfs.get_node_info(resolved_path)
+        if not node:
+            raise ValueError(f"Path not found: {resolved_path}")
 
-        if node.is_directory and not recursive:
+        if node.is_dir and not recursive:
             raise ValueError(
                 "Cannot remove directory without recursive=True. "
                 "Use recursive=True to remove directories."
             )
 
-        if node.is_directory:
-            await vfs.delete_directory(resolved_path, recursive=True)
+        if node.is_dir:
+            await vfs.rmdir(resolved_path)
         else:
-            await vfs.delete_file(resolved_path)
+            await vfs.rm(resolved_path)
 
         return RemoveResponse(success=True, path=resolved_path)
 
@@ -221,11 +245,9 @@ class VFSTools:
         resolved_source = self.workspace_manager.resolve_path(source)
         resolved_dest = self.workspace_manager.resolve_path(dest)
 
-        await vfs.move(resolved_source, resolved_dest)
+        await vfs.mv(resolved_source, resolved_dest)
 
-        return MoveResponse(
-            success=True, source=resolved_source, dest=resolved_dest
-        )
+        return MoveResponse(success=True, source=resolved_source, dest=resolved_dest)
 
     async def cp(self, request: CopyRequest) -> CopyResponse:
         """
@@ -241,13 +263,11 @@ class VFSTools:
         resolved_source = self.workspace_manager.resolve_path(request.source)
         resolved_dest = self.workspace_manager.resolve_path(request.dest)
 
-        await vfs.copy(
-            resolved_source, resolved_dest, recursive=request.recursive
-        )
+        # Note: cp method doesn't have recursive parameter in AsyncVirtualFileSystem
+        # It handles directories automatically
+        await vfs.cp(resolved_source, resolved_dest)
 
-        return CopyResponse(
-            success=True, source=resolved_source, dest=resolved_dest
-        )
+        return CopyResponse(success=True, source=resolved_source, dest=resolved_dest)
 
     # ========================================================================
     # Navigation Operations
@@ -267,8 +287,8 @@ class VFSTools:
         resolved_path = self.workspace_manager.resolve_path(path)
 
         # Verify path exists and is a directory
-        node = await vfs.get_node(resolved_path)
-        if not node.is_directory:
+        node = await vfs.get_node_info(resolved_path)
+        if not node or not node.is_dir:
             raise ValueError(f"Not a directory: {resolved_path}")
 
         self.workspace_manager.set_current_path(resolved_path)
@@ -307,19 +327,26 @@ class VFSTools:
                 truncated = True
                 return
 
-            entries = await vfs.list_directory(current_path)
-            for entry in entries:
+            filenames = await vfs.ls(current_path)
+            for name in filenames:
                 if len(results) >= request.max_results:
                     truncated = True
                     break
 
+                # Construct full path
+                if current_path == "/":
+                    full_path = f"/{name}"
+                else:
+                    full_path = f"{current_path}/{name}"
+
                 # Check if name matches pattern
-                if fnmatch(entry.name, request.pattern):
-                    results.append(entry.path)
+                if fnmatch(name, request.pattern):
+                    results.append(full_path)
 
                 # Recurse into directories
-                if entry.is_directory:
-                    await search(entry.path)
+                node_info = await vfs.get_node_info(full_path)
+                if node_info and node_info.is_dir:
+                    await search(full_path)
 
         await search(resolved_path)
         return FindResponse(
@@ -375,19 +402,32 @@ class VFSTools:
                 truncated = True
                 return
 
-            entries = await vfs.list_directory(current_path)
-            for entry in entries:
+            filenames = await vfs.ls(current_path)
+            for name in filenames:
                 if len(matches) >= request.max_results:
                     truncated = True
                     break
 
-                if entry.is_directory:
-                    await search_dir(entry.path)
+                # Construct full path
+                if current_path == "/":
+                    full_path = f"/{name}"
                 else:
-                    await search_file(entry.path)
+                    full_path = f"{current_path}/{name}"
 
-        node = await vfs.get_node(resolved_path)
-        if node.is_directory:
+                node_info = await vfs.get_node_info(full_path)
+                if not node_info:
+                    continue
+
+                if node_info.is_dir:
+                    await search_dir(full_path)
+                else:
+                    await search_file(full_path)
+
+        node = await vfs.get_node_info(resolved_path)
+        if not node:
+            raise ValueError(f"Path not found: {resolved_path}")
+
+        if node.is_dir:
             await search_dir(resolved_path)
         else:
             await search_file(resolved_path)

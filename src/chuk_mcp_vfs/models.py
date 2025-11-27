@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 try:
     from chuk_artifacts import StorageScope
@@ -14,6 +14,7 @@ except ImportError:
     # Fallback if chuk-artifacts not installed
     class StorageScope(str, Enum):
         """Storage scope (fallback if chuk-artifacts not available)"""
+
         SESSION = "session"
         USER = "user"
         SANDBOX = "sandbox"

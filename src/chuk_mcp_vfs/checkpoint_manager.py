@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 
 from chuk_virtual_fs.snapshot_manager import AsyncSnapshotManager
 
-from chuk_mcp_vfs.models import CheckpointInfo, ProviderType
+from chuk_mcp_vfs.models import CheckpointInfo
 from chuk_mcp_vfs.workspace_manager import WorkspaceManager
 
 
@@ -61,9 +61,7 @@ class CheckpointManager:
 
         # Get snapshot metadata
         snapshots = snapshot_mgr.list_snapshots()
-        snapshot_meta = next(
-            (s for s in snapshots if s["name"] == checkpoint_id), None
-        )
+        snapshot_meta = next((s for s in snapshots if s["name"] == checkpoint_id), None)
 
         if snapshot_meta is None:
             raise RuntimeError(f"Failed to create checkpoint: {checkpoint_id}")
@@ -72,9 +70,7 @@ class CheckpointManager:
             id=checkpoint_id,
             name=name,
             description=snapshot_meta.get("description", ""),
-            created_at=datetime.fromtimestamp(
-                snapshot_meta["created"], tz=UTC
-            ),
+            created_at=datetime.fromtimestamp(snapshot_meta["created"], tz=UTC),
             workspace=workspace_info.name,
             provider_type=workspace_info.provider_type,
             stats=snapshot_meta.get("stats", {}),
