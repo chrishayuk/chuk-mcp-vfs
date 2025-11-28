@@ -50,16 +50,63 @@ pip install -e .[dev]
 
 ## Quick Start
 
-### As MCP Server
+### Running the MCP Server
+
+The server supports two transport modes:
+
+#### 1. STDIO Transport (for Claude Desktop)
+
+```bash
+# Default - runs with stdio transport
+chuk-mcp-vfs
+
+# Explicitly specify stdio transport
+chuk-mcp-vfs --transport stdio
+
+# With debug logging
+chuk-mcp-vfs --transport stdio --debug
+```
+
+#### 2. SSE Transport (for HTTP/Streaming)
+
+```bash
+# Run with SSE transport (default: localhost:3000)
+chuk-mcp-vfs --transport sse
+
+# Custom host and port
+chuk-mcp-vfs --transport sse --host 0.0.0.0 --port 8080
+
+# With debug logging
+chuk-mcp-vfs --transport sse --debug
+```
+
+#### CLI Options
+
+```
+usage: chuk-mcp-vfs [-h] [--transport {stdio,sse}] [--host HOST] [--port PORT] [--debug]
+
+options:
+  -h, --help            show this help message and exit
+  --transport {stdio,sse}, -t {stdio,sse}
+                        Transport type: 'stdio' for Claude Desktop or 'sse' for streaming HTTP (default: stdio)
+  --host HOST           Host to bind to (only for SSE transport, default: 127.0.0.1)
+  --port PORT, -p PORT  Port to bind to (only for SSE transport, default: 3000)
+  --debug, -d           Enable debug logging
+```
+
+### Programmatic Server Usage
 
 ```python
 from chuk_mcp_vfs import run_server
 
-# Start MCP server (stdio mode for Claude Desktop)
-run_server()
+# Start with stdio transport (for Claude Desktop)
+run_server(transport="stdio")
+
+# Start with SSE transport (for HTTP/streaming)
+run_server(transport="sse", host="0.0.0.0", port=8080)
 ```
 
-### Programmatic Usage
+### Programmatic Workspace Usage
 
 ```python
 import asyncio
@@ -151,6 +198,19 @@ Add to `claude_desktop_config.json`:
     "vfs": {
       "command": "chuk-mcp-vfs",
       "args": []
+    }
+  }
+}
+```
+
+Or install with uvx (no global installation needed):
+
+```json
+{
+  "mcpServers": {
+    "vfs": {
+      "command": "uvx",
+      "args": ["chuk-mcp-vfs"]
     }
   }
 }

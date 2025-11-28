@@ -4,6 +4,7 @@ MCP Server for chuk-mcp-vfs
 Registers all VFS tools with the MCP framework.
 """
 
+import argparse
 import sys
 
 from chuk_mcp_server import ChukMCPServer
@@ -174,16 +175,93 @@ def create_server() -> ChukMCPServer:
     return server
 
 
-def run_server() -> None:
-    """Run the MCP server."""
+def run_server(
+    transport: str = "stdio",
+    host: str = "127.0.0.1",
+    port: int = 3000,
+    debug: bool = False,
+) -> None:
+    """
+    Run the MCP server with the specified transport.
+
+    Args:
+        transport: Transport type ("stdio" or "sse")
+        host: Host to bind to (only for SSE transport)
+        port: Port to bind to (only for SSE transport)
+        debug: Enable debug logging
+    """
     server = create_server()
-    server.run_stdio()
+
+    if transport.lower() == "stdio":
+        server.run_stdio(debug=debug)
+    elif transport.lower() == "sse":
+        # SSE is implemented as HTTP with streaming support
+        server.run(host=host, port=port, debug=debug)
+    else:
+        raise ValueError(f"Unknown transport: {transport}. Use 'stdio' or 'sse'")
 
 
 def main() -> None:
-    """Main entry point."""
+    """Main entry point with CLI argument parsing."""
+    parser = argparse.ArgumentParser(
+        description="chuk-mcp-vfs - MCP server for virtual filesystem workspaces",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Run with stdio transport (default, for Claude Desktop)
+  chuk-mcp-vfs
+
+  # Run with stdio transport explicitly
+  chuk-mcp-vfs --transport stdio
+
+  # Run with SSE transport for streaming HTTP
+  chuk-mcp-vfs --transport sse
+
+  # Run with SSE on custom host/port
+  chuk-mcp-vfs --transport sse --host 0.0.0.0 --port 8080
+
+  # Run with debug logging
+  chuk-mcp-vfs --transport sse --debug
+        """,
+    )
+
+    parser.add_argument(
+        "--transport",
+        "-t",
+        type=str,
+        choices=["stdio", "sse"],
+        default="stdio",
+        help="Transport type: 'stdio' for Claude Desktop or 'sse' for streaming HTTP (default: stdio)",
+    )
+
+    parser.add_argument(
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="Host to bind to (only for SSE transport, default: 127.0.0.1)",
+    )
+
+    parser.add_argument(
+        "--port",
+        "-p",
+        type=int,
+        default=3000,
+        help="Port to bind to (only for SSE transport, default: 3000)",
+    )
+
+    parser.add_argument(
+        "--debug",
+        "-d",
+        action="store_true",
+        help="Enable debug logging",
+    )
+
+    args = parser.parse_args()
+
     try:
-        run_server()
+        run_server(
+            transport=args.transport, host=args.host, port=args.port, debug=args.debug
+        )
     except KeyboardInterrupt:
         print("\nServer stopped by user", file=sys.stderr)
         sys.exit(0)
