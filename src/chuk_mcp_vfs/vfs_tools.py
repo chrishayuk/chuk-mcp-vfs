@@ -76,11 +76,14 @@ class VFSTools:
         Returns:
             WriteResponse with success status
         """
+        from pathlib import PurePosixPath
+
         vfs = self.workspace_manager.get_current_vfs()
         resolved_path = self.workspace_manager.resolve_path(request.path)
 
         # Ensure all parent directories exist
-        parent = str(Path(resolved_path).parent)
+        # Use PurePosixPath to ensure forward slashes on all platforms
+        parent = str(PurePosixPath(resolved_path).parent)
         if parent != "/":
             # Create all parent directories if they don't exist
             parts = [p for p in parent.split("/") if p]

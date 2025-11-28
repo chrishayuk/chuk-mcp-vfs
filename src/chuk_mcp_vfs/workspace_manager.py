@@ -9,7 +9,6 @@ This is a thin wrapper around chuk-artifacts that provides:
 
 import asyncio
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 from chuk_artifacts import ArtifactStore, NamespaceInfo, NamespaceType, StorageScope
@@ -371,13 +370,16 @@ class WorkspaceManager:
             workspace: Workspace name (None for current)
 
         Returns:
-            Absolute path
+            Absolute path (always uses forward slashes for VFS)
         """
         if path.startswith("/"):
             return path
 
         current = self.get_current_path(workspace)
-        return str(Path(current) / path)
+        # Use PurePosixPath to ensure forward slashes on all platforms
+        from pathlib import PurePosixPath
+
+        return str(PurePosixPath(current) / path)
 
     async def _apply_template(self, vfs: AsyncVirtualFileSystem, template: str) -> None:
         """
