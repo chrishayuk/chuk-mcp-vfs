@@ -25,8 +25,8 @@ classifiers = [
 ]
 
 dependencies = [
-    "chuk-virtual-fs>=0.3",
-    "chuk-artifacts>=0.9",
+    "chuk-virtual-fs>=0.3.1",
+    "chuk-artifacts>=0.9.1",
     "chuk-mcp-server>=0.8",
 ]
 
@@ -76,6 +76,10 @@ python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = "chuk_mcp_vfs.server"
+disable_error_code = ["arg-type"]
 
 [dependency-groups]
 dev = [

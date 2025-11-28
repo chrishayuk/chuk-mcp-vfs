@@ -4,6 +4,7 @@ VFS Tools - MCP tools for virtual filesystem operations
 All tools are async native and return Pydantic models.
 """
 
+from datetime import datetime
 from fnmatch import fnmatch
 from pathlib import Path
 
@@ -121,13 +122,21 @@ class VFSTools:
             # Get node info for each entry
             node_info = await vfs.get_node_info(full_path)
             if node_info:
+                # Parse modified_at timestamp if it's a string
+                modified: datetime | None = None
+                if node_info.modified_at:
+                    if isinstance(node_info.modified_at, str):
+                        modified = datetime.fromisoformat(node_info.modified_at)
+                    else:
+                        modified = node_info.modified_at
+
                 file_entries.append(
                     FileEntry(
                         name=name,
                         path=full_path,
                         type=NodeType.DIRECTORY if node_info.is_dir else NodeType.FILE,
                         size=node_info.size,
-                        modified=node_info.modified_at,
+                        modified=modified,
                     )
                 )
 
@@ -377,6 +386,9 @@ class VFSTools:
 
             try:
                 content = await vfs.read_file(file_path)
+                if content is None:
+                    return
+
                 if isinstance(content, bytes):
                     content_str = content.decode("utf-8", errors="ignore")
                 else:

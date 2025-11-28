@@ -299,3 +299,41 @@ async def test_get_current_vfs_no_workspace():
 
     with pytest.raises(ValueError, match="No current workspace"):
         manager.get_current_vfs()
+
+
+@pytest.mark.asyncio
+async def test_create_workspace_with_template():
+    """Test creating workspace with template."""
+    manager = WorkspaceManager()
+
+    # Create with template (will be applied via _apply_template)
+    info = await manager.create_workspace(
+        name="template-ws", provider_type=ProviderType.MEMORY, template="basic"
+    )
+
+    assert info.name == "template-ws"
+    # Verify workspace was created even if template application failed silently
+    assert info.provider_type == ProviderType.MEMORY
+
+
+@pytest.mark.asyncio
+async def test_get_vfs_nonexistent():
+    """Test getting VFS for non-existent workspace."""
+    manager = WorkspaceManager()
+
+    await manager.create_workspace(name="ws1", provider_type=ProviderType.MEMORY)
+
+    with pytest.raises(ValueError, match="does not exist"):
+        manager.get_vfs("nonexistent")
+
+
+@pytest.mark.asyncio
+async def test_get_current_path_with_workspace_name():
+    """Test getting current path for specific workspace."""
+    manager = WorkspaceManager()
+
+    await manager.create_workspace(name="ws1", provider_type=ProviderType.MEMORY)
+    manager.set_current_path("/test/path", workspace="ws1")
+
+    path = manager.get_current_path(workspace="ws1")
+    assert path == "/test/path"

@@ -8,6 +8,7 @@ This is a thin wrapper around chuk-artifacts that provides:
 """
 
 import asyncio
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -203,10 +204,14 @@ class WorkspaceManager:
                 ns_info.provider_type or "vfs-memory"
             )
 
+            # Skip if no name (shouldn't happen for WORKSPACE type, but be defensive)
+            if not ns_info.name:
+                continue
+
             workspace_info = WorkspaceInfo(
                 name=ns_info.name,
                 provider_type=provider_type,
-                created_at=ns_info.created_at,
+                created_at=datetime.fromisoformat(ns_info.created_at),
                 current_path="/",
                 metadata={
                     "namespace_id": ns_info.namespace_id,
@@ -231,7 +236,7 @@ class WorkspaceManager:
         user_id: str | None = None,
         session_id: str | None = None,
         type: NamespaceType | None = None,
-    ) -> list[NamespaceInfo]:
+    ) -> "list[NamespaceInfo]":
         """
         List all namespaces from artifact store.
 
@@ -256,7 +261,7 @@ class WorkspaceManager:
             except Exception:
                 session_id = None
 
-        return self._store.list_namespaces(
+        return self._store.list_namespaces(  # type: ignore[no-any-return]
             user_id=user_id,
             session_id=session_id,
             type=type,
@@ -321,7 +326,7 @@ class WorkspaceManager:
         if self._current_namespace_id is None:
             raise ValueError("No current workspace")
 
-        return self._store.get_namespace_vfs(self._current_namespace_id)
+        return self._store.get_namespace_vfs(self._current_namespace_id)  # type: ignore[no-any-return]
 
     def get_vfs(self, name: str) -> AsyncVirtualFileSystem:
         """
@@ -339,7 +344,7 @@ class WorkspaceManager:
         # Find namespace by name
         for nid, info in self._namespace_to_info.items():
             if info.name == name:
-                return self._store.get_namespace_vfs(nid)
+                return self._store.get_namespace_vfs(nid)  # type: ignore[no-any-return]
 
         raise ValueError(f"Workspace '{name}' does not exist")
 

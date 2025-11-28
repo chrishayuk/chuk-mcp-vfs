@@ -308,7 +308,7 @@ wheels = [
 
 [[package]]
 name = "chuk-artifacts"
-version = "0.9"
+version = "0.9.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aioboto3" },
@@ -320,9 +320,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "redis" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c9/c8/12a7474707222680b1270e3635d112afece6118229fb86c817ff4a2c83c8/chuk_artifacts-0.9.tar.gz", hash = "sha256:23c04540ca66c9a207164db8d37d24c2762f4397f3e36e4f77397223858cb1ee", size = 143143, upload-time = "2025-11-26T00:18:27.343Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/06/3a/b2046f10a64408cacc2819ab13331b0e06840eae2113d084eecee9e0d4df/chuk_artifacts-0.9.1.tar.gz", hash = "sha256:93e8e334ef2ca1a10011064b952096096c093fa8dc9a8c1332634efa8e4bd925", size = 147049, upload-time = "2025-11-28T01:04:32.189Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/49/f6/1f48c957bd0c438443e928b139992b77fc6283cf7247616e4eaa9383f532/chuk_artifacts-0.9-py3-none-any.whl", hash = "sha256:09c730ffb1a3fe3206f4566d378af32c027096eecd210360af87644dc15f326f", size = 72299, upload-time = "2025-11-26T00:18:25.781Z" },
+    { url = "https://files.pythonhosted.org/packages/f0/aa/3a1a8dc329646e9648d326ff064d729ae1342f72520a22f33da3a3f1b35b/chuk_artifacts-0.9.1-py3-none-any.whl", hash = "sha256:4dcd1fd0a6a8d2b3720277155721df99d31bb9751c9b23e3393fd899d43c8a5f", size = 72518, upload-time = "2025-11-28T01:04:30.909Z" },
 ]
 
 [[package]]
@@ -391,9 +391,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "chuk-artifacts", specifier = ">=0.9" },
+    { name = "chuk-artifacts", specifier = ">=0.9.1" },
     { name = "chuk-mcp-server", specifier = ">=0.8" },
-    { name = "chuk-virtual-fs", specifier = ">=0.3" },
+    { name = "chuk-virtual-fs", specifier = ">=0.3.1" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.8.0" },
     { name = "pyfuse3", marker = "sys_platform != 'win32' and extra == 'mount'", specifier = ">=3.3.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.5" },
@@ -424,7 +424,7 @@ wheels = [
 
 [[package]]
 name = "chuk-virtual-fs"
-version = "0.3"
+version = "0.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aioboto3" },
@@ -435,9 +435,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "wsgidav" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/89/5c/49905db1c9893d09a3d29287f1b8991ee9f355e5d378a89c10afa275a9de/chuk_virtual_fs-0.3.tar.gz", hash = "sha256:f690d8de9f123d53b4ae7bcc8dac1c6e9324e4bbb0cf6cc3daf82c40961936ff", size = 215911, upload-time = "2025-11-25T21:58:54.128Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/53/3b/b18927b09fd8118ff324daa2dc3e616d126cec63198c4d8502e7e092e0ad/chuk_virtual_fs-0.3.1.tar.gz", hash = "sha256:8088459f1e4ee6fec83d0f0285ffdb90b041c7188ba4d17eeab8001070b693be", size = 216045, upload-time = "2025-11-28T00:57:43.481Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/27/b4/36b186312e97cbf9e4e9075b5dfa9d1bad24511689fd19b9900e2701a734/chuk_virtual_fs-0.3-py3-none-any.whl", hash = "sha256:8ca85e6c0cfa0365ade23593470f905e16ac47b34d5bebdb3466daf611678075", size = 125728, upload-time = "2025-11-25T21:58:52.544Z" },
+    { url = "https://files.pythonhosted.org/packages/e3/10/ca0efa9582b604a9f8470f39655db4b88a04b4ae0214790112f05870a05d/chuk_virtual_fs-0.3.1-py3-none-any.whl", hash = "sha256:5c2c7ee5a0e96611379ca29891d955bc33750e9b09f0a0e181ff16d5563522df", size = 125926, upload-time = "2025-11-28T00:57:41.769Z" },
 ]
 
 [[package]]
